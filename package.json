@@ -1,0 +1,23 @@
+{
+  "name": "FrogWithABanjo",
+  "version": "0.0.1",
+  "description": "music discord bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ."
+  },
+  "author": "ivan.logon01@gmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/builders": "^0.8.2",
+    "@discordjs/opus": "^0.5.3",
+    "@discordjs/rest": "^0.1.0-canary.0",
+    "@discordjs/voice": "^0.7.5",
+    "discord-api-types": "^0.25.2",
+    "discord.js": "^13.3.1",
+    "dotenv": "^10.0.0",
+    "ffmpeg-static": "^4.4.0",
+    "libsodium-wrappers": "^0.7.9",
+    "ytdl-core": "^4.9.1"
+  }
+}
