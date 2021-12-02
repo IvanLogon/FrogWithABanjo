@@ -12,7 +12,8 @@ module.exports = {
         let url = interaction.options.getString('url');
         if (url.length > 2048)
             return interaction.reply({ content: 'How long you have it, the url of course!' });
-
+        if (!url.startsWith('https://www.youtube.com/watch?'))
+            return interaction.reply({ content: 'Sorry bro, url is not valid.' });
         // Check if user is in a voice channel
         let channel = interaction.member.voice.channel;
         if (!channel)
@@ -38,6 +39,6 @@ module.exports = {
 
         queues.get(interaction.channel.guild.id).play(url, connection);
 
-        return interaction.reply({ content: `Next rolita ${url}` });
+        return interaction.reply({ content: `Next rolita ${url}.` });
     }
 };
