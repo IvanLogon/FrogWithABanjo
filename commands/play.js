@@ -9,7 +9,7 @@ module.exports = {
         .addStringOption(option => option.setName('url').setDescription('link of the video').setRequired(true)),
     async execute(interaction) {
         // Check command syntax
-        let url = interaction.options.getString('url');
+        let url = interaction.options.getString('url').trim();
         if (url.length > 2048)
             return interaction.reply({ content: 'How long you have it, the url of course!' });
         if (!url.startsWith('https://www.youtube.com/watch?'))
