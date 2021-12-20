@@ -1,19 +1,20 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const Queue = require('../queue');
+const ytdl = require('ytdl-core');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
         .setDescription('Play a song.')
-        .addStringOption(option => option.setName('url').setDescription('link of the video').setRequired(true)),
+        .addStringOption(option => option.setName('url').setDescription('link of the video').setRequired(true))
+        .addBooleanOption(option => option.setName('playlist').setDescription('Is the link a playlist?').setRequired(false)),
     async execute(interaction) {
         // Check command syntax
         let url = interaction.options.getString('url').trim();
-        if (url.length > 2048)
-            return interaction.reply({ content: 'How long you have it, the url of course!' });
-        if (!url.startsWith('https://www.youtube.com/watch?'))
-            return interaction.reply({ content: 'Sorry bro, url is not valid.' });
+        let isPlaylist =  interaction.options.getBoolean('playlist');
+        if (!ytdl.validateURL(url))
+            return interaction.reply({ content: 'Sorry bro, url ins\'t valid.' });
         // Check if user is in a voice channel
         let channel = interaction.member.voice.channel;
         if (!channel)
@@ -37,7 +38,7 @@ module.exports = {
         if (!queues.has(interaction.channel.guild.id))
             queues.set(interaction.channel.guild.id, new Queue());
 
-        queues.get(interaction.channel.guild.id).play(url, connection);
+        queues.get(interaction.channel.guild.id).play(url, connection, isPlaylist);
 
         return interaction.reply({ content: `Next rolita ${url}.` });
     }

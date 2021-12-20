@@ -1,5 +1,6 @@
 'use strict';
 const ytdl = require('ytdl-core');
+const ytpl = require('ytpl');
 const {
     AudioPlayerStatus,
     StreamType,
@@ -15,31 +16,51 @@ module.exports = class Queue {
     }
 
     #dequeue() {
-        return this.songs.shift()
+        return this.songs.shift();
     }
 
     #enqueue(song) {
-        this.songs.push(song)
+        this.songs.push(song);
     }
 
     #play(song) {
-        let stream = ytdl(song, { filter: 'audioonly' });
+        let stream = ytdl(song, { quality: 'highestaudio', dlChunkSize: 6 * 1024 * 1024 });
         let resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
         this.player.play(resource);
     }
 
-    play(song, connection) {
+    play(song, connection, isPlaylist) {
         if (!(this.connection === null) && this.connection.joinConfig.channelId === connection.joinConfig.channelId) {
-            this.#enqueue(song)
+            // Enqueue song/playlist
+            if (isPlaylist) {
+                this.readPlaylist(song, false)
+            } else {
+                this.#enqueue(song);
+            }
         }
         else {
-            if (this.connection === null)
-                this.connection = connection;
+            // Guild player inicialization
+            this.connection = connection;
             this.player = createAudioPlayer();
             this.connection.subscribe(this.player);
             this.player.on(AudioPlayerStatus.Idle, () => this.skip());
+            // Add song/playlist
+            if (isPlaylist) {
+                this.readPlaylist(song, true)
+            }
             this.#play(song);
         }
+    }
+
+    readPlaylist(url, isEmpty) {
+        ytpl(url, { pages: 1 }).then(res => {
+            let short = url.slice(0, 43);
+            for (let item of res.items) {
+                if (!isEmpty || item.shortUrl != short) {
+                    this.#enqueue(item.url)
+                }
+            }
+        });
     }
 
     move(connection) {
