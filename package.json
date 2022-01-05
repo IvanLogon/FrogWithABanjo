@@ -1,6 +1,6 @@
 {
   "name": "FrogWithABanjo",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "music discord bot",
   "main": "index.js",
   "scripts": {
@@ -19,7 +19,7 @@
     "ffmpeg-static": "^4.4.0",
     "libsodium-wrappers": "^0.7.9",
     "node": "^17.1.0",
-    "ytdl-core": "^4.9.1",
+    "ytdl-core": "^4.9.2",
     "ytpl": "^2.2.3",
     "ytsr": "^3.5.3"
   }
