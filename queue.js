@@ -24,8 +24,8 @@ module.exports = class Queue {
     }
 
     #play() {
-        let url = #dequeue();
-        let stream = ytdl(url, { quality: 'highestaudio', dlChunkSize: 6 * 1024 * 1024 });
+        let url = this.#dequeue();
+        let stream = ytdl(url, { quality: 'lowestaudio', dlChunkSize: 6 * 1024 * 1024 });
         let resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
         this.player.play(resource);
     }
@@ -91,12 +91,6 @@ module.exports = class Queue {
 
     }
 
-    move(connection) {
-        if (this.isAlive()) {
-            this.connection = connection;
-        }
-    }
-
     skip() {
         let url = this.#dequeue();
         if (url === undefined) {
@@ -106,12 +100,14 @@ module.exports = class Queue {
         }
     }
 
-    pause() {
-        this.player.pause();
+    move(connection) {
+        if (this.isAlive()) {
+            this.connection = connection;
+        }
     }
 
-    resume() {
-        this.player.unpause();
+    pause() {
+        this.player.pause();
     }
 
     stop() {
@@ -121,6 +117,11 @@ module.exports = class Queue {
         this.player = null;
         this.connection = null;
     }
+    resume() {
+        this.player.unpause();
+    }
+
+
 
     isAlive() {
         return !(this.connection === null);
