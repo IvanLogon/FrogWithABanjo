@@ -2,34 +2,26 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const { joinVoiceChannel } = require('@discordjs/voice');
 const Queue = require('../queue');
 const ytdl = require('ytdl-core');
-const ytsr = require('ytsr');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
         .setDescription('Play a song.')
-        .addStringOption(option => option.setName('input').setDescription('link of the video').setRequired(true)),
+        .addStringOption(option => option.setName('url').setDescription('link of the video').setRequired(true)),
     async execute(interaction) {
-        // Process input
-        let input = interaction.options.getString('input').trim();
-        if (!ytdl.validateinput(input)) {
-            return interaction.reply({ content: 'Sorry bro, input ins\'t valid.' });
-        } else {
-            const search = await ytrs(input)
-            console.log(search)
-        }
-
+        // Check command syntax
+        let url = interaction.options.getString('url').trim();
+        if (!ytdl.validateURL(url))
+            return interaction.reply({ content: 'Sorry bro, url ins\'t valid.' });
         // Check if user is in a voice channel
         let channel = interaction.member.voice.channel;
-        if (!channel) {
+        if (!channel)
             return interaction.reply({ content: 'You need to be in a voice channel to play music!' });
-        }
 
         // Check if bot has permissions.
         let permissions = channel.permissionsFor(interaction.client.user);
-        if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
+        if (!permissions.has('CONNECT') || !permissions.has('SPEAK'))
             return interaction.reply({ content: 'I need the permissions to join your voice channel!' });
-        }
 
         // Create the connection
         let connection = joinVoiceChannel({
@@ -44,9 +36,9 @@ module.exports = {
             queues.set(interaction.channel.guild.id, new Queue());
         }
         let queue = queues.get(interaction.channel.guild.id);
-        queue.enqueueSong(input);
+        queue.enqueuePlaylist(url);
         queue.start(connection);
 
-        return interaction.reply({ content: `Next rolita ${input}.` });
+        return interaction.reply({ content: `Next rolita ${url}.` });
     }
 };

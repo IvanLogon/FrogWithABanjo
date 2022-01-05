@@ -12,31 +12,60 @@ module.exports = class Queue {
     constructor() {
         this.connection = null;
         this.player = null;
-        this.songs = [];
+        this.urls = [];
     }
 
     #dequeue() {
-        return this.songs.shift();
+        return this.urls.shift();
     }
 
-    #enqueue(song) {
-        this.songs.push(song);
+    #enqueue(url) {
+        this.urls.push(url);
     }
 
-    #play(song) {
-        let stream = ytdl(song, { quality: 'highestaudio', dlChunkSize: 6 * 1024 * 1024 });
+    #play() {
+        let url = #dequeue();
+        let stream = ytdl(url, { quality: 'highestaudio', dlChunkSize: 6 * 1024 * 1024 });
         let resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
         this.player.play(resource);
     }
 
-    play(song, connection, isPlaylist) {
-        if (!(this.connection === null) && this.connection.joinConfig.channelId === connection.joinConfig.channelId) {
-            // Enqueue song/playlist
-            if (isPlaylist) {
-                this.readPlaylist(song, false)
-            } else {
-                this.#enqueue(song);
+    enqueuePlaylist(url) {
+        // Resolves playlist
+        ytpl(url, { pages: 1 }).then(res => {
+            let short = url.slice(0, 43);
+            for (let item of res.items) {
+                if (!isEmpty || item.shorturl != short) {
+                    this.#enqueue(item.url)
+                }
             }
+        });
+    }
+
+    enqueueSong(url) {
+        // Comprobar si es url o 'texto plano'
+        this.#enqueue(url);
+    }
+
+    playlist(url, connection) {
+        if (!(this.connection === null) && this.connection.joinConfig.channelId === connection.joinConfig.channelId) {
+            this.readPlaylist(url, false)
+        } else {
+            // Guild player inicialization
+            this.connection = connection;
+            this.player = createAudioPlayer();
+            this.connection.subscribe(this.player);
+            this.player.on(AudioPlayerStatus.Idle, () => this.skip());
+            // Add url/playlist
+            this.readPlaylist(url, true)
+            this.#play(url);
+        }
+    }
+
+    play(url, connection) {
+        if (!(this.connection === null) && this.connection.joinConfig.channelId === connection.joinConfig.channelId) {
+            // Enqueue url
+            this.#enqueue(url);
         }
         else {
             // Guild player inicialization
@@ -44,23 +73,22 @@ module.exports = class Queue {
             this.player = createAudioPlayer();
             this.connection.subscribe(this.player);
             this.player.on(AudioPlayerStatus.Idle, () => this.skip());
-            // Add song/playlist
-            if (isPlaylist) {
-                this.readPlaylist(song, true)
-            }
-            this.#play(song);
+            // Add url
+            this.#play(url);
         }
     }
 
-    readPlaylist(url, isEmpty) {
-        ytpl(url, { pages: 1 }).then(res => {
-            let short = url.slice(0, 43);
-            for (let item of res.items) {
-                if (!isEmpty || item.shortUrl != short) {
-                    this.#enqueue(item.url)
-                }
-            }
-        });
+    start(connection) {
+        if (!(this.connection === null) && this.connection.joinConfig.channelId === connection.joinConfig.channelId) {
+            return;
+        }
+        // Guild player inicialization
+        this.connection = connection;
+        this.player = createAudioPlayer();
+        this.connection.subscribe(this.player);
+        this.player.on(AudioPlayerStatus.Idle, () => this.skip());
+        this.#play();
+
     }
 
     move(connection) {
@@ -70,11 +98,11 @@ module.exports = class Queue {
     }
 
     skip() {
-        let song = this.#dequeue();
-        if (song === undefined) {
+        let url = this.#dequeue();
+        if (url === undefined) {
             this.stop();
         } else {
-            this.#play(song);
+            this.#play(url);
         }
     }
 
@@ -87,7 +115,7 @@ module.exports = class Queue {
     }
 
     stop() {
-        this.songs = [];
+        this.urls = [];
         this.player.stop();
         this.connection.destroy();
         this.player = null;
