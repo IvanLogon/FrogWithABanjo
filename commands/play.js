@@ -8,15 +8,13 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('play')
         .setDescription('Play a song.')
-        .addStringOption(option => option.setName('input').setDescription('link of the video').setRequired(true)),
+        .addStringOption(option => option.setName('input').setDescription('name or link of the video').setRequired(true)),
     async execute(interaction) {
         // Process input
         let input = interaction.options.getString('input').trim();
-        if (!ytdl.validateinput(input)) {
-            return interaction.reply({ content: 'Sorry bro, input ins\'t valid.' });
-        } else {
-            const search = await ytrs(input)
-            console.log(search)
+        if (!ytdl.validateURL(input)) {
+            const search = await ytsr(input, { limit: 1 });
+            input = search.items[0].url;
         }
 
         // Check if user is in a voice channel

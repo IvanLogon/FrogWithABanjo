@@ -24,18 +24,21 @@ rest.get(Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUIL
         }
         return Promise.all(promises);
     });
+
+rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
+    .then(() => console.log('Successfully registered application commands.'))
+    .catch(console.error);
 */
+
 rest.get(Routes.applicationCommands(process.env.CLIENT_ID))
     .then(data => {
         const promises = [];
         for (const command of data) {
-            console.log(command)
-            //const deleteUrl = `${Routes.applicationCommands(process.env.CLIENT_ID)}/${command.id}`;
-            //promises.push(rest.delete(deleteUrl));
+            const deleteUrl = `${Routes.applicationCommands(process.env.CLIENT_ID)}/${command.id}`;
+            promises.push(rest.delete(deleteUrl));
         }
         return Promise.all(promises);
     });
-
 
 rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands })
     .then(() => console.log('Successfully registered application commands.'))

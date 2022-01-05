@@ -5,8 +5,8 @@ const ytdl = require('ytdl-core');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('play')
-        .setDescription('Play a song.')
+        .setName('playlist')
+        .setDescription('Play a playlist.')
         .addStringOption(option => option.setName('url').setDescription('link of the video').setRequired(true)),
     async execute(interaction) {
         // Check command syntax
@@ -36,7 +36,7 @@ module.exports = {
             queues.set(interaction.channel.guild.id, new Queue());
         }
         let queue = queues.get(interaction.channel.guild.id);
-        queue.enqueuePlaylist(url);
+        await queue.enqueuePlaylist(url);
         queue.start(connection);
 
         return interaction.reply({ content: `Next rolita ${url}.` });
