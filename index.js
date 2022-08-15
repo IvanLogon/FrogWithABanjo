@@ -3,6 +3,12 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 const { Client, Collection, Intents } = require('discord.js');
 
+
+// ENV
+dotenv.config();
+const TOKEN = process.env.TOKEN;
+
+
 //Initialization
 const client = new Client({
     intents: [
@@ -13,14 +19,16 @@ const client = new Client({
 });
 client.commands = new Collection();
 client.queues = new Collection();
-dotenv.config();
+
 
 //Commands
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+
 for (let file of commandFiles) {
     let command = require(`./commands/${file}`);
     client.commands.set(command.data.name, command);
 }
+
 
 //Events
 client.once('ready', () => {
@@ -46,7 +54,7 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-client.login(process.env.TOKEN);
+client.login(TOKEN);
 
 // Server for uptimerobot
-require('http').createServer((req, res) => res.end('Bot is alive!')).listen(3000);
+//require('http').createServer((req, res) => res.end('Bot is alive!')).listen(3000);

@@ -4,7 +4,9 @@
   "description": "music discord bot",
   "main": "index.js",
   "scripts": {
-    "start": "node ."
+    "start": "node .",
+    "deploy-prod": "node ./deploy/deploy-prod.js",
+    "deploy-dev": "node ./deploy/deploy-dev.js"
   },
   "author": "ivan.logon01@gmail.com",
   "license": "MIT",
