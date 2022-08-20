@@ -6,6 +6,7 @@ const {
     createAudioPlayer,
     createAudioResource,
     joinVoiceChannel,
+    VoiceConnectionStatus,
 } = require('@discordjs/voice');
 const Queue = require('./Queue');
 
@@ -36,20 +37,6 @@ module.exports = class Player {
         this.queue.enqueue(url);
     }
 
-    start(interaction) {
-        this.player = createAudioPlayer();
-        this.player.on(AudioPlayerStatus.Idle, () => this.next());
-
-        this.connection = joinVoiceChannel({
-            channelId: interaction.member.voice.channel.id,
-            guildId: interaction.guild.id,
-            adapterCreator: interaction.guild.voiceAdapterCreator,
-        });
-        this.connection.subscribe(this.player);
-
-        this.next();
-    }
-
     // Observer
     addObserver(element) {
         this.observers.push(element);
@@ -62,6 +49,25 @@ module.exports = class Player {
     }
 
     // State
+    start(interaction) {
+        this.player = createAudioPlayer();
+        this.player.on(AudioPlayerStatus.Idle, () => this.next());
+        this.player.on('error', (error) => {
+            console.error(`Error: ${error.message}`);
+            this.next();
+        });
+
+        this.connection = joinVoiceChannel({
+            channelId: interaction.member.voice.channel.id,
+            guildId: interaction.guild.id,
+            adapterCreator: interaction.guild.voiceAdapterCreator,
+        });
+        this.connection.on(VoiceConnectionStatus.Disconnected, () => this.quit());
+        this.connection.subscribe(this.player);
+
+        this.next();
+    }
+
     quit() {
         // UIs
         this.notify({ isQuit: true });
@@ -78,15 +84,14 @@ module.exports = class Player {
     move(interaction) {
         let channel = interaction.member.voice.channel;
         if (!channel) {
-            return interaction.reply({ content: 'You need to be in a voice channel to play music!' });
+            return interaction.reply({ content: 'You need to be in a voice channel' });
         }
-
         // Check if bot has permissions.
         let permissions = channel.permissionsFor(interaction.client.user);
         if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
             return interaction.reply({ content: 'I need the permissions to join your voice channel!' });
         }
-        
+
         this.connection = joinVoiceChannel({
             channelId: interaction.member.voice.channel.id,
             guildId: interaction.guild.id,
@@ -97,16 +102,14 @@ module.exports = class Player {
 
     prev() {
         let url = this.queue.prequeue();
-        if (url !== undefined) {
-            this.#play(url);
-        }
-        ytdl.getBasicInfo(url, {}).then(res => this.notify({
-            isFirst: this.queue.first(),
-            isStopped: false,
-            song: { title: res.player_response.videoDetails.title, url: url }
-        }));
-
-
+        this.#play(url);
+        ytdl.getBasicInfo(url, {}).then(res =>
+            this.notify({
+                isFirst: this.queue.first(),
+                isStopped: false,
+                song: { title: res.player_response.videoDetails.title, url: url }
+            })
+        );
     }
 
     resume() {

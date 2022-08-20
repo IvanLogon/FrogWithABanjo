@@ -104,10 +104,22 @@ module.exports = class UI {
         }
     }
 
+    #dispose() {
+        if (this.interaction.isButton()) {
+            this.interaction
+                .update({ content: 'Bye!', embeds: [], components: [] })
+                .catch((error) => console.error(error));
+        } else {
+            this.interaction
+                .editReply({ content: 'Bye!', embeds: [], components: [] })
+                .catch((error) => console.error(error));
+        }
+        this.collector.stop("");
+    }
+
     update({ isFirst, isStopped, isQuit, song }) {
         if (isQuit) {
-            this.interaction.update({content: 'Bye!', embeds: [], components:[]});
-            this.collector.stop("");
+            this.#dispose();
         } else {
             const embed = this.#updateEmbed(song);
             this.#updatePrevBtn(isFirst);
