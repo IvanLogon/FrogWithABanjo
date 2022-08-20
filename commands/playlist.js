@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { joinVoiceChannel } = require('@discordjs/voice');
-const Queue = require('../queue');
+const Player = require('../Player/Player');
 const ytdl = require('ytdl-core');
 
 module.exports = {
@@ -31,12 +31,12 @@ module.exports = {
         });
 
         // Play audio
-        let queues = interaction.client.queues;
+        let queues = interaction.client.players;
         if (!queues.has(interaction.channel.guild.id)) {
-            queues.set(interaction.channel.guild.id, new Queue());
+            queues.set(interaction.channel.guild.id, new Player());
         }
         let queue = queues.get(interaction.channel.guild.id);
-        await queue.enqueuePlaylist(url);
+        await queue.addPlaylistToQueue(url);
         queue.start(connection);
 
         return interaction.reply({ content: `Next rolita ${url}.` });

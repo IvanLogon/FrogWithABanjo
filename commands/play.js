@@ -1,8 +1,10 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { joinVoiceChannel } = require('@discordjs/voice');
-const Queue = require('../queue');
-const ytdl = require('ytdl-core');
+const { validateURL } = require('ytdl-core');
 const ytsr = require('ytsr');
+
+const Player = require('../Player/Player');
+const UI = require('../Player/UI');
+
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -12,7 +14,7 @@ module.exports = {
     async execute(interaction) {
         // Process input
         let input = interaction.options.getString('input').trim();
-        if (!ytdl.validateURL(input)) {
+        if (!validateURL(input)) {
             const search = await ytsr(input, { limit: 1 });
             input = search.items[0].url;
         }
@@ -29,22 +31,18 @@ module.exports = {
             return interaction.reply({ content: 'I need the permissions to join your voice channel!' });
         }
 
-        // Create the connection
-        let connection = joinVoiceChannel({
-            channelId: channel.id,
-            guildId: interaction.channel.guild.id,
-            adapterCreator: interaction.channel.guild.voiceAdapterCreator,
-        });
-
         // Play audio
-        let queues = interaction.client.queues;
-        if (!queues.has(interaction.channel.guild.id)) {
-            queues.set(interaction.channel.guild.id, new Queue());
+        let players = interaction.client.players;
+        let player = players.get(interaction.channel.guild.id);
+        if (player?.isAlive()) {
+            player.addSongToQueue(input);
+            interaction.reply({ content: "Song added" });
+        } else {
+            player = new Player();
+            new UI(player, interaction);
+            players.set(interaction.channel.guild.id, player);
+            player.addSongToQueue(input);
+            player.start(interaction);
         }
-        let queue = queues.get(interaction.channel.guild.id);
-        queue.enqueueSong(input);
-        queue.start(connection);
-
-        return interaction.reply({ content: `Next rolita ${input}.` });
     }
 };
