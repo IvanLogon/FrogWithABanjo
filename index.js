@@ -52,6 +52,18 @@ client.on('interactionCreate', async interaction => {
         });
 });
 
+const killHandle = async () => {
+    for (let val of client.players.values()) {
+        await val.dispose();
+    }
+    console.log("Borrado Process");
+    process.exit();
+}
+
+process.on('SIGHUP', killHandle);
+process.on('SIGINT', killHandle);
+process.on('SIGTERM', killHandle);
+
 client.login(TOKEN);
 
 // Server for uptimerobot

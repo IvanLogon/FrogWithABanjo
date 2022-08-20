@@ -42,16 +42,21 @@ module.exports = class Player {
         this.observers.push(element);
     }
 
-    notify(state) {
-        this.observers.forEach(observer => {
+    #notifyObservers(state) {
+        for (let observer of this.observers) {
             observer.update(state);
-        });
+        }
     }
 
+    async #disposeObservers() {
+        for (let observer of this.observers) {
+            await observer.dispose();
+        }
+    }
     // State
     #sameChannel(interaction) {
-        if (interaction === undefined) return true;
-        
+        if (interaction === undefined) return false;
+
         const isSameChannel = interaction.member.voice.channel.id != this.connection.joinConfig.channelId;
         if (isSameChannel) {
             interaction.reply({ content: 'You need to be in the same voice channel' });
@@ -80,9 +85,8 @@ module.exports = class Player {
 
     quit(interaction) {
         if (this.#sameChannel(interaction)) return;
-
         // UIs
-        this.notify({ isQuit: true });
+        this.#notifyObservers({ isQuit: true });
         this.observers = null;
         // Player
         this.player.stop();
@@ -109,7 +113,7 @@ module.exports = class Player {
             guildId: interaction.guild.id,
             adapterCreator: interaction.guild.voiceAdapterCreator,
         });
-        this.notify({})
+        this.#notifyObservers({})
     }
 
     prev(interaction) {
@@ -118,7 +122,7 @@ module.exports = class Player {
         let url = this.queue.prequeue();
         this.#play(url);
         ytdl.getBasicInfo(url, {}).then(res =>
-            this.notify({
+            this.#notifyObservers({
                 isFirst: this.queue.first(),
                 isStopped: false,
                 song: { title: res.player_response.videoDetails.title, url: url }
@@ -130,14 +134,14 @@ module.exports = class Player {
         if (this.#sameChannel(interaction)) return;
 
         this.player.unpause();
-        this.notify({ isStopped: false });
+        this.#notifyObservers({ isStopped: false });
     }
 
     pause(interaction) {
         if (this.#sameChannel(interaction)) return;
 
         this.player.pause();
-        this.notify({ isStopped: true });
+        this.#notifyObservers({ isStopped: true });
     }
 
     next(interaction) {
@@ -148,7 +152,7 @@ module.exports = class Player {
             this.quit();
         } else {
             this.#play(url);
-            ytdl.getBasicInfo(url, {}).then(res => this.notify({
+            ytdl.getBasicInfo(url, {}).then(res => this.#notifyObservers({
                 isFirst: this.queue.first(),
                 isStopped: false,
                 song: { title: res.player_response.videoDetails.title, url: url }
@@ -158,5 +162,12 @@ module.exports = class Player {
 
     isAlive() {
         return !(this.connection === null);
+    }
+
+    async dispose() {
+        await this.#disposeObservers();
+        this.player.stop();
+        this.connection.destroy();
+        console.log("Borrado Player");
     }
 }

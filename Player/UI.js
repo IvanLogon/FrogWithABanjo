@@ -104,27 +104,20 @@ module.exports = class UI {
         }
     }
 
-    #dispose() {
+    async dispose() {
         if (this.interaction.isButton()) {
-            this.interaction
-                .update({ content: 'Bye!', embeds: [], components: [] })
-                .catch((error) => console.error(error));
+            await this.interaction.update({ content: 'Bye!', embeds: [], components: [] });
         } else {
-            this.interaction
-                .editReply({ content: 'Bye!', embeds: [], components: [] })
-                .catch((error) => console.error(error));
+            await this.interaction.editReply({ content: 'Bye!', embeds: [], components: [] });
         }
         this.collector.stop("");
+        console.log("Borrado UI");
     }
 
-    update({ isFirst, isStopped, isQuit, song }) {
-        if (isQuit) {
-            this.#dispose();
-        } else {
-            const embed = this.#updateEmbed(song);
-            this.#updatePrevBtn(isFirst);
-            this.#updatePlayAndPauseBtn(isStopped);
-            this.#render(embed);
-        }
+    update({ isFirst, isStopped, song }) {
+        const embed = this.#updateEmbed(song);
+        this.#updatePrevBtn(isFirst);
+        this.#updatePlayAndPauseBtn(isStopped);
+        this.#render(embed);
     }
 }
