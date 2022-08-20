@@ -49,6 +49,16 @@ module.exports = class Player {
     }
 
     // State
+    #sameChannel(interaction) {
+        if (interaction === undefined) return true;
+        
+        const isSameChannel = interaction.member.voice.channel.id != this.connection.joinConfig.channelId;
+        if (isSameChannel) {
+            interaction.reply({ content: 'You need to be in the same voice channel' });
+        }
+        return isSameChannel;
+    }
+
     start(interaction) {
         this.player = createAudioPlayer();
         this.player.on(AudioPlayerStatus.Idle, () => this.next());
@@ -65,10 +75,12 @@ module.exports = class Player {
         this.connection.on(VoiceConnectionStatus.Disconnected, () => this.quit());
         this.connection.subscribe(this.player);
 
-        this.next();
+        this.next(interaction);
     }
 
-    quit() {
+    quit(interaction) {
+        if (this.#sameChannel(interaction)) return;
+
         // UIs
         this.notify({ isQuit: true });
         this.observers = null;
@@ -100,7 +112,9 @@ module.exports = class Player {
         this.notify({})
     }
 
-    prev() {
+    prev(interaction) {
+        if (this.#sameChannel(interaction)) return;
+
         let url = this.queue.prequeue();
         this.#play(url);
         ytdl.getBasicInfo(url, {}).then(res =>
@@ -112,17 +126,23 @@ module.exports = class Player {
         );
     }
 
-    resume() {
+    resume(interaction) {
+        if (this.#sameChannel(interaction)) return;
+
         this.player.unpause();
         this.notify({ isStopped: false });
     }
 
-    pause() {
+    pause(interaction) {
+        if (this.#sameChannel(interaction)) return;
+
         this.player.pause();
         this.notify({ isStopped: true });
     }
 
-    next() {
+    next(interaction) {
+        if (this.#sameChannel(interaction)) return;
+
         let url = this.queue.dequeue();
         if (url === undefined) {
             this.quit();

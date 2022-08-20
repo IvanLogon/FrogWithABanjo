@@ -37,19 +37,19 @@ module.exports = class UI {
                     player.move(interaction);
                     break;
                 case 'Quit':
-                    player.quit();
+                    player.quit(interaction);
                     break;
                 case 'Prev':
-                    player.prev();
+                    player.prev(interaction);
                     break;
                 case 'Play':
-                    player.resume();
+                    player.resume(interaction);
                     break;
                 case 'Stop':
-                    player.pause();
+                    player.pause(interaction);
                     break;
                 case 'Next':
-                    player.next();
+                    player.next(interaction);
                     break;
             }
         });
