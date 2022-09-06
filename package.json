@@ -1,6 +1,6 @@
 {
   "name": "FrogWithABanjo",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "music discord bot",
   "main": "index.js",
   "scripts": {

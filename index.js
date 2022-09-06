@@ -18,7 +18,7 @@ const client = new Client({
     ]
 });
 client.commands = new Collection();
-client.queues = new Collection();
+client.players = new Collection();
 
 
 //Commands
@@ -41,18 +41,27 @@ client.on('interactionCreate', async interaction => {
     //Command
     if (!client.commands.has(interaction.commandName)) return;
     //Execute
-    try {
-        client.commands
-            .get(interaction.commandName)
-            .execute(interaction);
-    } catch (error) {
-        console.error(error);
-        return interaction.reply({
-            content: 'There was an error while executing this command!',
-            ephemeral: true
+    client.commands.get(interaction.commandName)
+        .execute(interaction)
+        .catch((error) => {
+            console.error(error);
+            return interaction.reply({
+                content: 'There was an error while executing this command!',
+                ephemeral: true
+            });
         });
-    }
 });
+
+const killHandle = async () => {
+    for (let val of client.players.values()) {
+        await val.dispose();
+    }
+    process.exit();
+}
+
+process.on('SIGHUP', killHandle);
+process.on('SIGINT', killHandle);
+process.on('SIGTERM', killHandle);
 
 client.login(TOKEN);
 
