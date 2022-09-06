@@ -1,5 +1,4 @@
 const ytdl = require('ytdl-core');
-const ytpl = require('ytpl');
 const {
     AudioPlayerStatus,
     StreamType,
@@ -24,15 +23,6 @@ module.exports = class Player {
         this.player.play(resource);
     }
 
-    // TODO mover al comando
-    async addPlayListToQueue(url) {
-        ytpl(url, { pages: 1 }).then(res => {
-            for (let item of res.items) {
-                this.queue.enqueue(item.url);
-            }
-        });
-    }
-
     addSongToQueue(url) {
         this.queue.enqueue(url);
     }
@@ -42,9 +32,9 @@ module.exports = class Player {
         this.observers.push(element);
     }
 
-    #notifyObservers(state) {
+    async #notifyObservers(state) {
         for (let observer of this.observers) {
-            observer.update(state);
+            await observer.update(state);
         }
     }
 
@@ -53,23 +43,20 @@ module.exports = class Player {
             await observer.dispose();
         }
     }
+
     // State
     #sameChannel(interaction) {
-        if (interaction === undefined) return false;
+        if (interaction === undefined) return true;
 
-        const isSameChannel = interaction.member.voice.channel.id != this.connection.joinConfig.channelId;
-        if (isSameChannel) {
-            interaction.reply({ content: 'You need to be in the same voice channel' });
-        }
-        return isSameChannel;
+        return interaction.member.voice.channel.id == this.connection.joinConfig.channelId;
     }
 
-    start(interaction) {
+    async start(interaction) {
         this.player = createAudioPlayer();
-        this.player.on(AudioPlayerStatus.Idle, () => this.next());
-        this.player.on('error', (error) => {
+        this.player.on(AudioPlayerStatus.Idle, async () => await this.next());
+        this.player.on('error', async (error) => {
             console.error(`Error: ${error.message}`);
-            this.next();
+            await this.next();
         });
 
         this.connection = joinVoiceChannel({
@@ -77,17 +64,17 @@ module.exports = class Player {
             guildId: interaction.guild.id,
             adapterCreator: interaction.guild.voiceAdapterCreator,
         });
-        this.connection.on(VoiceConnectionStatus.Disconnected, () => this.quit());
         this.connection.subscribe(this.player);
 
-        this.next(interaction);
+        await this.next(interaction);
     }
 
-    quit(interaction) {
-        if (this.#sameChannel(interaction)) return;
+    async quit(interaction) {
+        if (!this.#sameChannel(interaction))
+            return await interaction.reply({ content: 'You need to be in the same voice channel' });
         // UIs
-        this.#notifyObservers({ isQuit: true });
-        this.observers = null;
+        await this.#disposeObservers();
+        this.observers = [];
         // Player
         this.player.stop();
         this.connection.destroy();
@@ -97,77 +84,96 @@ module.exports = class Player {
         this.queue = null;
     }
 
-    move(interaction) {
+    async move(interaction) {
+        // Check if user is in a voice channel
         let channel = interaction.member.voice.channel;
         if (!channel) {
-            return interaction.reply({ content: 'You need to be in a voice channel' });
-        }
-        // Check if bot has permissions.
-        let permissions = channel.permissionsFor(interaction.client.user);
-        if (!permissions.has('CONNECT') || !permissions.has('SPEAK')) {
-            return interaction.reply({ content: 'I need the permissions to join your voice channel!' });
+            return await interaction.reply({ content: 'You need to be in a voice channel' });
         }
 
+        // Check same channel
+        if (this.#sameChannel(interaction))
+            return await interaction.reply({ content: 'You need to be in a different voice channel' });
+
+        // Check if bot has permissions.
+        let permissions = channel.permissionsFor(interaction.client.user);
+        if (!permissions.has('CONNECT') || !permissions.has('SPEAK'))
+            return await interaction.reply({ content: 'I need the permissions to join your voice channel!' });
+
+        // Change connection
         this.connection = joinVoiceChannel({
             channelId: interaction.member.voice.channel.id,
             guildId: interaction.guild.id,
             adapterCreator: interaction.guild.voiceAdapterCreator,
         });
-        this.#notifyObservers({})
+
+        await this.#notifyObservers({})
     }
 
-    prev(interaction) {
-        if (this.#sameChannel(interaction)) return;
+    async prev(interaction) {
+        if (!this.#sameChannel(interaction))
+            return await interaction.reply({ content: 'You need to be in the same voice channel' });
 
         let url = this.queue.prequeue();
         this.#play(url);
-        ytdl.getBasicInfo(url, {}).then(res =>
-            this.#notifyObservers({
-                isFirst: this.queue.first(),
-                isStopped: false,
-                song: { title: res.player_response.videoDetails.title, url: url }
-            })
-        );
+        const response = await ytdl.getBasicInfo(url, {});
+        await this.#notifyObservers({
+            isFirst: this.queue.first(),
+            isStopped: false,
+            song: {
+                title: response.player_response.videoDetails.title,
+                thumbnail: response.videoDetails.thumbnails[0].url,
+                url: url
+            }
+        });
     }
 
-    resume(interaction) {
-        if (this.#sameChannel(interaction)) return;
+    async resume(interaction) {
+        if (!this.#sameChannel(interaction))
+            return await interaction.reply({ content: 'You need to be in the same voice channel' });
 
         this.player.unpause();
-        this.#notifyObservers({ isStopped: false });
+        await this.#notifyObservers({ isStopped: false });
     }
 
-    pause(interaction) {
-        if (this.#sameChannel(interaction)) return;
+    async pause(interaction) {
+        if (!this.#sameChannel(interaction))
+            await interaction.reply({ content: 'You need to be in the same voice channel' });
 
         this.player.pause();
-        this.#notifyObservers({ isStopped: true });
+        await this.#notifyObservers({ isStopped: true });
     }
 
-    next(interaction) {
-        if (this.#sameChannel(interaction)) return;
+    async next(interaction) {
+        if (!this.#sameChannel(interaction))
+            return await interaction.reply({ content: 'You need to be in the same voice channel' });
 
         let url = this.queue.dequeue();
-        if (url === undefined) {
-            this.quit();
-        } else {
-            this.#play(url);
-            ytdl.getBasicInfo(url, {}).then(res => this.#notifyObservers({
-                isFirst: this.queue.first(),
-                isStopped: false,
-                song: { title: res.player_response.videoDetails.title, url: url }
-            }));
-        }
+        if (url === undefined)
+            return await this.quit(interaction);
+
+        this.#play(url);
+        const response = await ytdl.getBasicInfo(url, {});
+        await this.#notifyObservers({
+            isFirst: this.queue.first(),
+            isStopped: false,
+            song: {
+                title: response.player_response.videoDetails.title,
+                thumbnail: response.videoDetails.thumbnails[0].url,
+                url: url
+            }
+        });
     }
 
     isAlive() {
-        return !(this.connection === null);
+        return !(this.connection === null || this.connection === undefined || this.player === null || this.player === undefined);
     }
 
     async dispose() {
         await this.#disposeObservers();
-        this.player.stop();
-        this.connection.destroy();
-        console.log("Borrado Player");
+        if (this.player != null) {
+            this.player.stop();
+            this.connection.destroy();
+        }
     }
 }

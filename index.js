@@ -56,7 +56,6 @@ const killHandle = async () => {
     for (let val of client.players.values()) {
         await val.dispose();
     }
-    console.log("Borrado Process");
     process.exit();
 }
 

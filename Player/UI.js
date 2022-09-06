@@ -29,27 +29,27 @@ module.exports = class UI {
         // Events
         player.addObserver(this);
         this.interaction = interaction;
-        this.collector = interaction.channel.createMessageComponentCollector();
-        this.collector.on('collect', async interaction => {
+        this.collector = interaction.channel.createMessageComponentCollector({ componentType: "BUTTON" });
+        this.collector.on('collect', async (interaction) => {
             this.interaction = interaction;
             switch (interaction.customId) {
                 case 'Move':
-                    player.move(interaction);
+                    await player.move(interaction);
                     break;
                 case 'Quit':
-                    player.quit(interaction);
+                    await player.quit(interaction);
                     break;
                 case 'Prev':
-                    player.prev(interaction);
+                    await player.prev(interaction);
                     break;
                 case 'Play':
-                    player.resume(interaction);
+                    await player.resume(interaction);
                     break;
                 case 'Stop':
-                    player.pause(interaction);
+                    await player.pause(interaction);
                     break;
                 case 'Next':
-                    player.next(interaction);
+                    await player.next(interaction);
                     break;
             }
         });
@@ -83,6 +83,7 @@ module.exports = class UI {
             embed = new MessageEmbed()
                 .setColor('#FF0000')
                 .setTitle(song.title)
+                .setImage(song.thumbnail)
                 .setURL(song.url);
         } else {
             embed = this.interaction.message.embeds[0];
@@ -90,34 +91,39 @@ module.exports = class UI {
         return embed;
     }
 
-    #render(embed) {
-        if (this.interaction.isButton()) {
-            this.interaction.update({
-                embeds: [embed],
-                components: this.layout()
-            }).catch((error) => console.error(error));
+    async #render(embed) {
+        const message = {
+            content: " ",
+            embeds: [embed],
+            components: this.layout()
+        }
+
+        if (this.interaction.isButton() && !this.interaction.replied) {
+            await this.interaction.update(message).catch((error) => console.error(error));
         } else {
-            this.interaction.reply({
-                embeds: [embed],
-                components: this.layout()
-            }).catch((error) => console.error(error));
+            await this.interaction.editReply(message).catch((error) => console.error(error));
         }
     }
 
     async dispose() {
-        if (this.interaction.isButton()) {
-            await this.interaction.update({ content: 'Bye!', embeds: [], components: [] });
+        const message = {
+            content: "Bye!!",
+            embeds: [],
+            components: []
+        };
+
+        if (this.interaction.isButton() && !this.interaction.replied) {
+            await this.interaction.update(message).catch((error) => console.error(error));
         } else {
-            await this.interaction.editReply({ content: 'Bye!', embeds: [], components: [] });
+            await this.interaction.editReply(message).catch((error) => console.error(error));
         }
         this.collector.stop("");
-        console.log("Borrado UI");
     }
 
-    update({ isFirst, isStopped, song }) {
+    async update({ isFirst, isStopped, song }) {
         const embed = this.#updateEmbed(song);
         this.#updatePrevBtn(isFirst);
         this.#updatePlayAndPauseBtn(isStopped);
-        this.#render(embed);
+        await this.#render(embed);
     }
 }
